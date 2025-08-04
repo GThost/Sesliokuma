@@ -41,6 +41,17 @@
       font-size: 18px;
       font-weight: bold;
     }
+    select {
+      margin-top: 20px;
+      font-size: 16px;
+      padding: 8px;
+      border-radius: 6px;
+      background-color: #1e1e2f;
+      color: white;
+      border: none;
+      width: 90%;
+      max-width: 400px;
+    }
   </style>
 </head>
 <body>
@@ -49,6 +60,10 @@
 
   <textarea id="text">Merhaba! Bu metni sesli olarak okuyorum.</textarea><br/>
 
+  <select id="voiceSelect" aria-label="Ses Seçimi">
+    <option value="">Sesler yükleniyor...</option>
+  </select><br/>
+
   <button class="speak-button" onclick="speak()">🔊</button>
 
   <div>
@@ -56,16 +71,47 @@
   </div>
 
   <script>
+    const voiceSelect = document.getElementById('voiceSelect');
+    let voices = [];
+
+    function populateVoices() {
+      voices = speechSynthesis.getVoices();
+      voiceSelect.innerHTML = '';
+
+      voices.forEach((voice, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = `${voice.lang} — ${voice.name}${voice.default ? ' (Varsayılan)' : ''}`;
+        voiceSelect.appendChild(option);
+      });
+
+      // Eğer varsayılan ses varsa onu seç
+      const defaultIndex = voices.findIndex(v => v.default);
+      voiceSelect.selectedIndex = defaultIndex !== -1 ? defaultIndex : 0;
+    }
+
+    speechSynthesis.onvoiceschanged = populateVoices;
+    // İlk yüklemede dene
+    populateVoices();
+
     function speak() {
       const text = document.getElementById("text").value.trim();
       if (!text) return alert("Lütfen metin girin!");
 
+      if (speechSynthesis.speaking) {
+        speechSynthesis.cancel(); // Önceki sesi iptal et
+      }
+
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "tr-TR";
+      const selectedVoice = voices[voiceSelect.value];
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+      }
+      // Dil otomatik ses dilinden alınacak, dil belirtmeye gerek yok
+
       speechSynthesis.speak(utterance);
 
       utterance.onend = () => {
-        // Gerçek ses kaydı yapılmadığı için sadece simüle ediyoruz
         const link = document.getElementById("downloadLink");
         link.href = "#";  // Dosya olmadığından gerçek indirme yok
         link.textContent = "📥 İndir (Sesi Kaydet)";
